@@ -1,5 +1,6 @@
 import ply.yacc as yacc
 from aLexico import tokens
+import sys
 
 
 # Mapeo de tokens técnicos a nombres amigables para el usuario
@@ -179,4 +180,9 @@ def p_error(p):
         print("Error de sintaxis: Final inesperado del archivo (quizás falta un ';' o cerrar paréntesis).")
 
 #Para construir el parser, usamos la función específicada en la lección 13: PLY YACC (yacc.yacc):
-parser = yacc.yacc()
+if getattr(sys, 'frozen', False):
+    # MODO EXE
+    parser = yacc.yacc(debug=False, write_tables=False, errorlog=yacc.NullLogger())
+else:
+    # MODO NORMAL 
+    parser = yacc.yacc()
