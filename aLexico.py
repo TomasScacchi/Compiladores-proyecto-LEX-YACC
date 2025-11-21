@@ -9,7 +9,7 @@ import re # Necesario para la función t_ID
 # Lista completa de Tokens Terminales para el Analizador Sintáctico
 tokens = [
     # Palabras Reservadas
-    'SELECT', 'WHERE', 'CREATE', 'TABLE', 'INT', 'VARCHAR', 'DECIMAL',
+    'SELECT', 'FROM', 'WHERE', 'CREATE', 'TABLE', 'INT', 'VARCHAR', 'DECIMAL',
     'MIN', 'MAX', 'COUNT', 'AND', 'OR', 'NOT',
     # Operadores y Símbolos
     'MAS', 'MENOS', 'POR', 'DIV', 'IGUAL', 'MAYOR', 'MENOR',
@@ -22,7 +22,7 @@ tokens = [
 # Diccionario de Palabras Reservadas (para manejar insensibilidad)
 # Usaremos esto en la función t_ID
 reserved = {
-    'select': 'SELECT', 'where': 'WHERE', 'create': 'CREATE', 'table': 'TABLE',
+    'select': 'SELECT', 'from': 'FROM', 'where': 'WHERE', 'create': 'CREATE', 'table': 'TABLE',
     'int': 'INT', 'varchar': 'VARCHAR', 'decimal': 'DECIMAL',
     'min': 'MIN', 'max': 'MAX', 'count': 'COUNT',
     'and': 'AND', 'or': 'OR', 'not': 'NOT'

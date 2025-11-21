@@ -41,48 +41,53 @@ def p_sentencia_select(p):
     '''sentencia_select : SELECT lista_campos FROM ID where_opcional'''
     pass
 
-def where_opcional(p):
-    '''where_opcional : WHERE condcion
+def p_where_opcional(p):
+    '''where_opcional : WHERE condicion
                       | empty'''
     pass
 
-def lista_campos(p):
+def p_lista_campos(p):
     '''lista_campos : elemento COMA lista_campos
                     | elemento
                     | POR'''
     pass
 
-def elemento(p):
+def p_elemento(p):
     '''elemento : ID
                 | funcion_agr'''
     pass
 
-def funcion_agr(p):
+def p_funcion_agr(p):
     '''funcion_agr : MIN PARENT_IZQ ID PARENT_DER
                    | MAX PARENT_IZQ ID PARENT_DER
                    | COUNT PARENT_IZQ ID PARENT_DER'''
     pass
 
-def condicion(p):
+def p_condicion(p):
     '''condicion : expr_logica'''
     pass
 
-def expr_logica(p):
+def p_expr_logica(p):
     '''expr_logica : expr_logica OR term_logico
                    | term_logico'''
     pass
 
-def term_logico(p):
+def p_term_logico(p):
     '''term_logico : term_logico AND factor_logico
                    | factor_logico'''
     pass
 
-def predicado(p):
+def p_factor_logico(p):
+    '''factor_logico : NOT factor_logico
+                     | predicado'''
+    pass
+
+def p_predicado(p):
     '''predicado : expresion op_comparacion expresion
                  | PARENT_IZQ condicion PARENT_DER'''
     pass
 
-def op_comparacion(p):
+def p_op_comparacion(p):
     '''op_comparacion : IGUAL
                       | MAYOR
                       | MENOR
@@ -90,24 +95,28 @@ def op_comparacion(p):
                       | MENOR_IGUAL'''
     pass
 
-def expresion(p):
+def p_expresion(p):
     ''' expresion : expresion MAS termino
                   | expresion MENOS termino
                   | termino'''
     pass
 
-def termino(p):
+def p_termino(p):
     '''termino : termino POR factor
                | termino DIV factor
                | factor'''
     pass
 
-def factor(p):
+def p_factor(p):
     '''factor : ID
               | NUM_ENTERO
               | NUM_REAL
               | CADENA
               | PARENT_IZQ expresion PARENT_DER'''
+    pass
+
+def p_empty(p):
+    '''empty :'''
     pass
 
 # ===============================================
@@ -120,5 +129,5 @@ def p_error(p):
     else:
         print ("Error de sintaxis al final del archivo.")
 
-#Para construir el parser, usamos la función específicada en la lección de analizador sintáctico (yacc.yacc):
+#Para construir el parser, usamos la función específicada en la lección 13: PLY YACC (yacc.yacc):
 parser = yacc.yacc()
