@@ -2,6 +2,9 @@
 import ply.lex as lex
 import re # Necesario para la función t_ID
 
+
+lex.error_list = [] 
+lex.error_count = 0
 # ===============================================
 # 1. DECLARACIÓN DE TOKENS
 # ===============================================
@@ -99,39 +102,21 @@ def t_newline(t):
 
 # Tratamiento de Errores Léxicos
 def t_error(t):
-    # El lexema (t.value) contiene la secuencia no reconocida [cite: 160]
-    print(f"Error Léxico en línea {t.lineno}: Carácter ilegal '{t.value[0]}'")
-    t.lexer.skip(1) # Ignora el carácter y sigue analizando [cite: 1]
+    # Almacenar el error en la lista en lugar de imprimirlo
+    error_msg = f"Error Léxico en línea {t.lineno}: Carácter ilegal '{t.value[0]}'"
+    # Añadir al listado de errores que será consumido por main.py
+    t.lexer.error_list.append(error_msg) 
+    t.lexer.skip(1)
+
+def reset_lexer():
+    lexer.lineno = 1
+    lexer.error_list = []
 
 # ===============================================
 # 4. CONSTRUCCIÓN Y PRUEBA
 # ===============================================
 
 # Construcción del Analizador Léxico (Scanner)
-lexer = lex.lex(reflags=re.IGNORECASE) # Usar re.IGNORECASE para hacer el t_ID más flexible
+lexer = lex.lex(reflags=re.IGNORECASE)
+lexer.reset_lexer = reset_lexer
 
-# --- Bloque de Prueba (Adaptado de Ejemplo 2) ---
-if __name__ == '__main__':
-    filename='prueba_sql.txt' # Nombre de archivo de prueba (A ser creado)
-    
-    # Intenta leer el archivo
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = f.read()
-    except FileNotFoundError:
-        print(f"Error: No se encontró el archivo '{filename}'. Creando datos de prueba por defecto.")
-        data = "CREATE TABLE Clientes (ID INT, Nombre VARCHAR(50), Saldo DECIMAL(10,2));\n"
-        data += "SELECT Nombre, MIN(Saldo) FROM Clientes WHERE Saldo >= 100.00 -- Fin de consulta\n"
-        data += "SELECT * FROM Productos;"
-        
-    lexer.input(data)
-
-    print('====================================================')
-    print('Token         | Lexema                | Línea')
-    print('====================================================')
-    while True:
-        tok = lexer.token()
-        if not tok: break
-        # Formato de salida para la prueba
-        print(f"{tok.type:13} | {tok.value!s:21} | {tok.lineno}")
-    print('====================================================')

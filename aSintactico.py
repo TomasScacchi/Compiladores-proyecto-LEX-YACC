@@ -10,12 +10,15 @@ from aLexico import tokens
 # Símbolo inicial S = {programa}
 def p_programa(p):
     '''programa : sentencia
-                | programa sentencia'''
+                | programa sentencia
+                | programa error PUNTO_COMA'''  
     p[0] = "Programa compilado correctamente!"
 
 def p_sentencia(p):
     '''sentencia : sentencia_select PUNTO_COMA
-                 | sentencia_create PUNTO_COMA'''
+                 | sentencia_create PUNTO_COMA
+                 | error PUNTO_COMA         
+                 | error'''
     pass
 
 def p_sentencia_create(p):
