@@ -7,7 +7,7 @@ def validar_programa(nombre_archivo):
 
     try:
         with open(nombre_archivo, 'r', encoding='utf-8') as f:
-            data = f.read
+            data = f.read()
     except FileNotFoundError:
         print(f"Error: No se pudo abrir el archivo '{nombre_archivo}'")
         return
@@ -31,7 +31,7 @@ def validar_programa(nombre_archivo):
         print("PROGRAMA FINALIZADO CON ERRORES")
 
 if __name__ == '__main__':
-    archivo = './caso_exito.txt'
+    archivo = 'pruebas/caso_exito.txt'
     if len(sys.argv) > 1:
         archivo = sys.argv[1]
 
