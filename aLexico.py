@@ -102,9 +102,7 @@ def t_newline(t):
 
 # Tratamiento de Errores Léxicos
 def t_error(t):
-    # Almacenar el error en la lista en lugar de imprimirlo
     error_msg = f"Error Léxico en línea {t.lineno}: Carácter ilegal '{t.value[0]}'"
-    # Añadir al listado de errores que será consumido por main.py
     t.lexer.error_list.append(error_msg) 
     t.lexer.skip(1)
 

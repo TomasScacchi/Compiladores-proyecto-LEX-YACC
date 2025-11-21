@@ -1,6 +1,28 @@
 import ply.yacc as yacc
 from aLexico import tokens
 
+
+# Mapeo de tokens técnicos a nombres amigables para el usuario
+nombres_amigables = {
+    'PUNTO_COMA': '";"',
+    'COMA': '","',
+    'PARENT_IZQ': '"("',
+    'PARENT_DER': '")"',
+    'IGUAL': '"="',
+    'MAS': '"+"',
+    'MENOS': '"-"',
+    'POR': '"*"',
+    'DIV': '"/"',
+    'ID': 'Identificador',
+    'NUM_ENTERO': 'Número Entero',
+    'NUM_REAL': 'Número Real',
+    'CADENA': 'Cadena de texto',
+    'SELECT': 'SELECT',
+    'FROM': 'FROM',
+    'WHERE': 'WHERE',
+    'CREATE': 'CREATE',
+    'TABLE': 'TABLE',
+}
 # ===============================================
 # 1. DEFINICIÓN DE LA GRAMÁTICA 
 # ===============================================
@@ -16,10 +38,13 @@ def p_programa(p):
 
 def p_sentencia(p):
     '''sentencia : sentencia_select PUNTO_COMA
-                 | sentencia_create PUNTO_COMA
-                 | error PUNTO_COMA         
-                 | error'''
+                 | sentencia_create PUNTO_COMA'''
     pass
+
+def p_sentencia_error(p):
+    '''sentencia : error PUNTO_COMA'''
+    global parser
+    parser.errok()
 
 def p_sentencia_create(p):
     '''sentencia_create : CREATE TABLE ID PARENT_IZQ lista_columna PARENT_DER'''
@@ -127,10 +152,31 @@ def p_empty(p):
 # ===============================================
 
 def p_error(p):
+    # Traemos el parser global para inspeccionar su estado actual
+    global parser
+    
     if p:
-        print (f"Error de sintaxis en la línea {p.lineno}: Se encontró '{p.value}' inesperado.")
+        # Obtenemos el estado actual de la pila del parser
+        # (El estado antes de que ocurriera el error)
+        estado_actual = parser.state
+        
+        # Buscamos en la tabla de acciones qué tokens eran válidos en este estado
+        acciones_validas = parser.action[estado_actual].keys()
+        
+        # Filtramos tokens internos de PLY (como $end o error)
+        esperados = []
+        for token in acciones_validas:
+            if token not in ('$end', 'error'):
+                # Usamos el nombre amigable si existe, sino el nombre técnico
+                nombre = nombres_amigables.get(token, token)
+                esperados.append(nombre)
+        
+        # Formateamos la lista de esperados (ej: "';', ','")
+        mensaje_esperado = " o ".join(esperados)
+        
+        print(f"Error de sintaxis en la línea {p.lineno}: Se encontró '{p.value}' pero se esperaba {mensaje_esperado}.")
     else:
-        print ("Error de sintaxis al final del archivo.")
+        print("Error de sintaxis: Final inesperado del archivo (quizás falta un ';' o cerrar paréntesis).")
 
 #Para construir el parser, usamos la función específicada en la lección 13: PLY YACC (yacc.yacc):
 parser = yacc.yacc()
