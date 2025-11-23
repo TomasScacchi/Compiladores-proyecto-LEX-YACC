@@ -4,47 +4,54 @@ from tkinter import filedialog, scrolledtext
 import io
 import contextlib
 import os
+import re
+
 # Importamos el parser y el lexer definidos
 from aSintactico import parser 
 from aLexico import lexer 
-
 
 # --- COLORES ---
 BG_DARK = '#2e2e2e'      
 FG_LIGHT = '#cccccc'      
 BG_CONSOLE = '#1e1e1e'    
 COLOR_SUCCESS = '#70c770' 
-COLOR_ERROR = '#ff6b6b'   
+COLOR_ERROR = '#ff6b6b'
+COLOR_HIGHLIGHT_ERROR = '#5e2a2a' 
+SASH_COLOR = '#444444'
 
 # 1. LÓGICA DE COMPILACIÓN
 def compilar_programa(data, output_widget, code_widget):
     """Realiza el análisis léxico y sintáctico del código fuente y reporta."""
+    
     output_widget.delete(1.0, tk.END)
+    code_widget.tag_remove('error_line', '1.0', tk.END)
+    
     output_widget.insert(tk.END, "Iniciando compilación...\n")
     
-    # 1. Análisis Léxico (Pasada completa)
+    lineas_con_error = set()
+
+    # 1. Análisis Léxico
     output_widget.insert(tk.END, "Realizando Análisis Léxico...\n")
-    
-    # Resetear el lexer y sus contadores de error antes de cada análisis
     lexer.reset_lexer() 
     lexer.input(data)
  
     try:
         while True:
             token = lexer.token()
-            if not token:
-                break
+            if not token: break
     except Exception as e:
-        output_widget.insert(tk.END, f"Error interno durante el Análisis Léxico: {e}\n", 'error')
+        output_widget.insert(tk.END, f"Error interno: {e}\n", 'error')
         return
 
     lex_errors = "\n".join(lexer.error_list)
     lex_error_count = len(lexer.error_list)
     
+    for err in lexer.error_list:
+        match = re.search(r'línea\s+(\d+)', err)
+        if match: lineas_con_error.add(int(match.group(1)))
+
     # 2. Análisis Sintáctico
     output_widget.insert(tk.END, "Realizando Análisis Sintáctico...\n")
-    
-    # Resetear de nuevo para el parser
     lexer.reset_lexer()
     lexer.input(data) 
     
@@ -53,35 +60,30 @@ def compilar_programa(data, output_widget, code_widget):
         parser.parse(data, lexer=lexer)
     
     syn_errors_raw = syn_output.getvalue().strip()
-    
     syn_error_lines = [line for line in syn_errors_raw.split('\n') if "Error de sintaxis" in line]
     syn_errors = "\n".join(syn_error_lines)
     syn_error_count = len(syn_error_lines)
     
+    for err in syn_error_lines:
+        match = re.search(r'línea\s+(\d+)', err)
+        if match: lineas_con_error.add(int(match.group(1)))
 
-    # --- 3. REPORTE DE RESULTADOS (LIMPIO) ---
-    
+    # 3. Reporte
     is_correct = (lex_error_count == 0) and (syn_error_count == 0)
-
     output_widget.insert(tk.END, "\n--- RESULTADO DEL ANÁLISIS ---\n", 'header')
 
-    # 3.1 Reporte de Errores Léxicos
     output_widget.insert(tk.END, "Errores léxicos:\n", 'error')
     if lex_errors:
-        for line in lex_errors.split('\n'):
-             output_widget.insert(tk.END, f" - {line}\n", 'error')
+        for line in lex_errors.split('\n'): output_widget.insert(tk.END, f" - {line}\n", 'error')
     else:
         output_widget.insert(tk.END, " - Ninguno\n", 'success')
 
-    # 3.2 Reporte de Errores Sintácticos
-    output_widget.insert(tk.END, "\n Errores sintácticos:\n", 'error')
+    output_widget.insert(tk.END, "\nErrores sintácticos:\n", 'error')
     if syn_errors:
-        for line in syn_errors.split('\n'):
-             output_widget.insert(tk.END, f" - {line}\n", 'error')
+        for line in syn_errors.split('\n'): output_widget.insert(tk.END, f" - {line}\n", 'error')
     else:
         output_widget.insert(tk.END, " - Ninguno\n", 'success')
     
-    # 3.3 Resumen Final
     output_widget.insert(tk.END, "\n-----------------------------\n")
     output_widget.insert(tk.END, f"Errores léxicos: {lex_error_count}\n")
     output_widget.insert(tk.END, f"Errores sintácticos: {syn_error_count}\n")
@@ -90,110 +92,138 @@ def compilar_programa(data, output_widget, code_widget):
         output_widget.insert(tk.END, "COMPILACIÓN EXITOSA: CÓDIGO CORRECTO\n", 'success')
     else:
         output_widget.insert(tk.END, "PROGRAMA FINALIZADO CON ERRORES\n", 'error')
-        
+        for num_linea in lineas_con_error:
+            code_widget.tag_add('error_line', f"{num_linea}.0", f"{num_linea}.end")
+
     output_widget.insert(tk.END, "-----------------------------\n")
-
-    code_widget.delete(1.0, tk.END)
-    code_widget.insert(tk.END, data)
-
 
 
 class CompilerGUI:
     def __init__(self, master):
         self.master = master
         master.title("Compilador SQL - Grupo N° 23")
-        
-        # --- APLICAR TEMA OSCURO A LA VENTANA PRINCIPAL ---
+        master.geometry("1300x700") 
         master.config(bg=BG_DARK) 
+
+        self.paned_window = tk.PanedWindow(master, orient=tk.HORIZONTAL, bg=BG_DARK, sashwidth=6, sashrelief=tk.RAISED)
+        self.paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # ------------------------------------------------------------
+        # 1. PANEL IZQUIERDO: EDITOR 
+        # ------------------------------------------------------------
+        self.frame_editor = tk.Frame(self.paned_window, bg=BG_DARK)
         
-        # 2.1 Configuración de Frames
-        self.code_frame = tk.Frame(master, bg=BG_DARK)
-        self.code_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=5)
+        tk.Label(self.frame_editor, text="Editor de Código SQL:", bg=BG_DARK, fg=FG_LIGHT, font=('Arial', 10, 'bold')).pack(anchor='w')
+        
+        
+        self.editor_container = tk.Frame(self.frame_editor, bg=BG_DARK)
+        self.editor_container.pack(fill=tk.BOTH, expand=True)
 
-        self.console_frame = tk.Frame(master, bg=BG_DARK)
-        self.console_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=10, pady=5)
-
-        # 2.2 Visor de Código Fuente
-        tk.Label(self.code_frame, text="Contenido del Archivo (.txt):", bg=BG_DARK, fg=FG_LIGHT).pack(pady=5)
+        
+        self.h_scroll_editor = tk.Scrollbar(self.editor_container, orient='horizontal')
+        
+        
         self.code_viewer = scrolledtext.ScrolledText(
-            self.code_frame, wrap=tk.NONE, width=80, height=12, font=('Consolas', 10), 
-            state=tk.DISABLED, bg=BG_CONSOLE, fg=FG_LIGHT, insertbackground=FG_LIGHT # Colores de consola
+            self.editor_container, wrap=tk.NONE, font=('Consolas', 11), 
+            bg=BG_CONSOLE, fg=FG_LIGHT, insertbackground=FG_LIGHT
         )
-        self.code_viewer.pack(fill=tk.BOTH, expand=True)
-
-        # 2.3 Consola de Resultados
-        tk.Label(self.console_frame, text="Resultados del Análisis (Consola):", bg=BG_DARK, fg=FG_LIGHT).pack(pady=5)
-        self.console = scrolledtext.ScrolledText(
-            self.console_frame, wrap=tk.WORD, width=80, height=12, font=('Consolas', 10),
-            bg=BG_CONSOLE, fg=FG_LIGHT, insertbackground=FG_LIGHT # Colores de consola
-        )
-        self.console.pack(fill=tk.BOTH, expand=True)
         
-        # Configuración de Tags (errores y éxito)
+        
+        self.code_viewer.config(xscrollcommand=self.h_scroll_editor.set)
+        self.h_scroll_editor.config(command=self.code_viewer.xview)
+
+        
+        self.h_scroll_editor.pack(side=tk.BOTTOM, fill=tk.X)
+        self.code_viewer.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        self.code_viewer.tag_config('error_line', background=COLOR_HIGHLIGHT_ERROR)
+        
+        
+        self.paned_window.add(self.frame_editor, minsize=400, stretch="always")
+
+        # ------------------------------------------------------------
+        # 2. PANEL CENTRAL: BOTONES
+        # ------------------------------------------------------------
+        self.frame_controls = tk.Frame(self.paned_window, bg=BG_DARK)
+        
+       
+        tk.Frame(self.frame_controls, bg=BG_DARK, height=80).pack()
+        
+        btn_opts = {'width': 14, 'font': ('Arial', 9, 'bold'), 'relief': tk.RAISED, 'bd': 3, 'cursor': 'hand2'}
+        
+        self.btn_load = tk.Button(self.frame_controls, text="Cargar", command=self.load_file, bg='#555555', fg=FG_LIGHT, **btn_opts)
+        self.btn_load.pack(pady=10, padx=10)
+
+        self.btn_run = tk.Button(self.frame_controls, text="COMPILAR", command=self.run_analysis, bg='#007acc', fg='white', activebackground='#0095ff', **btn_opts)
+        self.btn_run.pack(pady=20, padx=10)
+
+        self.btn_clear = tk.Button(self.frame_controls, text="Limpiar", command=self.clear_all, bg='#555555', fg=FG_LIGHT, **btn_opts)
+        self.btn_clear.pack(pady=10, padx=10)
+        
+        self.file_path_var = tk.StringVar(value="")
+        tk.Label(self.frame_controls, textvariable=self.file_path_var, wraplength=120, bg=BG_DARK, fg='#888888', font=('Arial', 8)).pack(pady=20)
+
+        self.paned_window.add(self.frame_controls, minsize=150, stretch="never")
+
+        # ------------------------------------------------------------
+        # 3. PANEL DERECHO: CONSOLA (Con Scroll Horizontal y Vertical)
+        # ------------------------------------------------------------
+        self.frame_console = tk.Frame(self.paned_window, bg=BG_DARK)
+        
+        tk.Label(self.frame_console, text="Reporte de Compilación:", bg=BG_DARK, fg=FG_LIGHT, font=('Arial', 10, 'bold')).pack(anchor='w')
+
+        self.console_container = tk.Frame(self.frame_console, bg=BG_DARK)
+        self.console_container.pack(fill=tk.BOTH, expand=True)
+
+        self.h_scroll_console = tk.Scrollbar(self.console_container, orient='horizontal')
+
+        self.console = scrolledtext.ScrolledText(
+            self.console_container, wrap=tk.NONE, font=('Consolas', 10), 
+            bg=BG_CONSOLE, fg=FG_LIGHT
+        )
+        
+        self.console.config(xscrollcommand=self.h_scroll_console.set)
+        self.h_scroll_console.config(command=self.console.xview)
+
+        self.h_scroll_console.pack(side=tk.BOTTOM, fill=tk.X)
+        self.console.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        
         self.console.tag_config('header', foreground='yellow', font=('Consolas', 10, 'bold'))
         self.console.tag_config('error', foreground=COLOR_ERROR, font=('Consolas', 10, 'bold'))
         self.console.tag_config('success', foreground=COLOR_SUCCESS, font=('Consolas', 10, 'bold'))
-        
-        # 2.4 Panel de Control (Botones)
-        self.control_frame = tk.Frame(master, bg=BG_DARK)
-        self.control_frame.pack(pady=10)
-        
-        self.file_path = tk.StringVar(value="Ningún archivo seleccionado...")
-        tk.Label(self.control_frame, textvariable=self.file_path, width=40, bg=BG_DARK, fg=FG_LIGHT).pack(side=tk.LEFT, padx=5)
 
-        # Estilo de botones para tema oscuro
-        button_style = {'bg': '#555555', 'fg': FG_LIGHT, 'activebackground': '#777777', 'activeforeground': FG_LIGHT, 'relief': tk.RAISED}
         
-        tk.Button(self.control_frame, text="Cargar Archivo", command=self.load_file, **button_style).pack(side=tk.LEFT, padx=5)
-        tk.Button(self.control_frame, text="Analizar Contenido", command=self.run_analysis, bg='#007acc', fg='white', activebackground='#0095ff').pack(side=tk.LEFT, padx=5) # Botón principal
-        tk.Button(self.control_frame, text="Limpiar Todo", command=self.clear_all, **button_style).pack(side=tk.LEFT, padx=5)
+        self.paned_window.add(self.frame_console, minsize=400, stretch="always")
 
     def load_file(self):
-        """Abre el diálogo para seleccionar archivos .txt y muestra el contenido."""
-        file_selected = filedialog.askopenfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
-        )
+        file_selected = filedialog.askopenfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
         if file_selected:
-            self.file_path.set(file_selected)
+            self.file_path_var.set(os.path.basename(file_selected))
             self.console.delete(1.0, tk.END)
-            
+            self.code_viewer.tag_remove('error_line', '1.0', tk.END)
             try:
                 with open(file_selected, 'r', encoding='utf-8') as f:
                     data = f.read()
-                
-                self.code_viewer.config(state=tk.NORMAL)
                 self.code_viewer.delete(1.0, tk.END)
                 self.code_viewer.insert(tk.END, data)
-                self.code_viewer.config(state=tk.DISABLED)
-                
-                self.console.insert(tk.END, f"Archivo cargado correctamente: {os.path.basename(file_selected)}\n")
+                self.console.insert(tk.END, f"Archivo cargado: {os.path.basename(file_selected)}\nListo para analizar.\n")
             except Exception as e:
                 self.console.insert(tk.END, f"Error al leer el archivo: {e}\n", 'error')
-                self.file_path.set("Error de lectura...")
 
     def run_analysis(self):
-        """Inicia el proceso de compilación con el contenido actual del visor."""
-        self.console.delete(1.0, tk.END)
-        
-        self.code_viewer.config(state=tk.NORMAL)
         data = self.code_viewer.get(1.0, tk.END)
-        self.code_viewer.config(state=tk.DISABLED)
-        
         if not data.strip():
-            self.console.insert(tk.END, "Error: No hay contenido para analizar. Cargue un archivo.\n", 'error')
+            self.console.delete(1.0, tk.END)
+            self.console.insert(tk.END, "Error: El editor está vacío.\n", 'error')
             return
-
         compilar_programa(data, self.console, self.code_viewer)
 
     def clear_all(self):
-        """Limpia el visor de código y la consola de resultados."""
-        self.code_viewer.config(state=tk.NORMAL)
         self.code_viewer.delete(1.0, tk.END)
-        self.code_viewer.config(state=tk.DISABLED)
+        self.code_viewer.tag_remove('error_line', '1.0', tk.END)
         self.console.delete(1.0, tk.END)
-        self.file_path.set("Ningún archivo seleccionado...")
-
+        self.file_path_var.set("")
 
 if __name__ == '__main__':
     root = tk.Tk()
