@@ -82,7 +82,7 @@ def p_lista_campos(p):
     pass
 
 def p_elemento(p):
-    '''elemento : ID
+    '''elemento : expresion
                 | funcion_agr'''
     pass
 

@@ -1,0 +1,8 @@
+CREATE TABLE alumno (
+    id_alumno INT,
+    nombre VARCHAR(50),
+);
+
+SELECT count(id_alumno) FROM alumno;
+SELECT nombre WHERE id_alumno > 10 FROM alumno;
+SELECT * FROM alumno WHER id_alumno;

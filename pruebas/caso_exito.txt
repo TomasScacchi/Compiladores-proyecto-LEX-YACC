@@ -1,9 +1,14 @@
 CREATE TABLE empleados (
-    id_emp INT,
-    nombre VARCHAR(50),
-    salario DECIMAL(10,2)
+    legajo INT,
+    nombre VARCHAR(30),
+    apellido VARCHAR(30),
+    salario DECIMAL(10,2),
+    antiguedad INT
 );
 
-SELECT nombre, salario FROM empleados WHERE salario > 50000.00;
+SELECT nombre, apellido, legajo FROM empleados;
+SELECT COUNT(legajo), MAX(salario), MIN(antiguedad) FROM empleados;
 
-SELECT count(id_emp) FROM empleados;
+SELECT nombre, apellido
+FROM empleados
+WHERE (salario > 50000.00 AND antiguedad >= 10);

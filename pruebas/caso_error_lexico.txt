@@ -1,0 +1,7 @@
+CREATE TABLE clientes (
+	id_cliente INT,
+	email VARCHAR(50)
+);
+
+SELECT * FROM clientes WHERE id_cliente = ?;
+SELECT salario $$ 100 FROM clientes;

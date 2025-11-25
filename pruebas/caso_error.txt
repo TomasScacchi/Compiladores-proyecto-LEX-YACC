@@ -1,5 +1,0 @@
-CREATE TABLE error (
-	id INT,
-	dato VARCHAR(20)
-
-SELECT * FROM error;
