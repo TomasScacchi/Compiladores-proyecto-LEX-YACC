@@ -1,0 +1,9 @@
+CREATE TABLE empleados (
+    id_emp INT,
+    nombre VARCHAR(50),
+    salario DECIMAL(10,2)
+);
+
+SELECT nombre, salario FROM empleados WHERE salario > 50000.00;
+
+SELECT count(id_emp) FROM empleados;
